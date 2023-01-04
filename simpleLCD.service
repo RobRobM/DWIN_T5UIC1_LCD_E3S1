@@ -5,7 +5,8 @@
  [Service]
  Type=idle
  ExecStartPre=/bin/sleep 20
- ExecStart=/bin/sh -c '/home/pi/DWIN_T5UIC1_LCD_E3S1/run.sh'
+ #Change USER to your username
+ ExecStart=/bin/sh -c '/home/USER/DWIN_T5UIC1_LCD_E3S1/run.sh'
 
  [Install]
  WantedBy=multi-user.target
