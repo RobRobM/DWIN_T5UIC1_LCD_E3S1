@@ -1,6 +1,8 @@
 import time
 import multitimer
 import atexit
+import requests
+import os
 
 from encoder import Encoder
 from RPi import GPIO
@@ -8,6 +10,13 @@ from RPi import GPIO
 from printerInterface import PrinterData
 from DWIN_Screen import T5UIC1_LCD
 
+PrinterStatusURL = "http://REPLACEYOURURL:7125/machine/device_power/status?Printer"
+PrinterOnURL = "http://REPLACEYOURURL:7125/machine/device_power/on?Printer"
+PrinterOffURL = "http://REPLACEYOURURL:7125/machine/device_power/off?Printer"
+
+LightStatusURL = "http://REPLACEYOURURL:7125/machine/device_power/status?Lights"
+LightOnURL = "http://REPLACEYOURURL:7125/machine/device_power/on?Lights"
+LightOffURL = "http://REPLACEYOURURL:7125/machine/device_power/off?Lights"
 
 def current_milli_time():
 	return round(time.time() * 1000)
@@ -277,7 +286,7 @@ class DWIN_LCD:
 	CONTROL_CASE_TEMP = 1
 	CONTROL_CASE_MOVE = 2
 	CONTROL_CASE_INFO = 3
-	CONTROL_CASE_TOTAL = 3
+	CONTROL_CASE_TOTAL = 4
 
 	TUNE_CASE_SPEED = 1
 	TUNE_CASE_TEMP = (TUNE_CASE_SPEED + 1)
@@ -642,12 +651,24 @@ class DWIN_LCD:
 				self.select_temp.reset()
 				self.Draw_Temperature_Menu()
 			if (self.select_control.now == self.CONTROL_CASE_MOVE):  # Motion
-				self.checkkey = self.Motion
-				self.select_motion.reset()
-				self.Draw_Motion_Menu()
+				print("Toggle Printer")
+				x = requests.get(PrinterStatusURL)
+				if ("on" in x.text):
+					y = requests.post(PrinterOffURL)
+				if ("off" in x.text):
+					y = requests.post(PrinterOnURL)
 			if (self.select_control.now == self.CONTROL_CASE_INFO):  # Info
-				self.checkkey = self.Info
-				self.Draw_Info_Menu()
+				print("Toggle Lights")
+				x = requests.get(LightStatusURL)
+				if ("on" in x.text):
+					y = requests.post(LightOffURL)
+				if ("off" in x.text):
+					y = requests.post(LightOnURL)
+			if (self.select_control.now == 4):  # Power
+				print("Restart")
+				os.system('sudo /home/pi/DWIN_T5UIC1_LCD_E3S1/restart.sh')
+				self.lcd.UpdateLCD()
+			
 
 		self.lcd.UpdateLCD()
 
@@ -1645,8 +1666,10 @@ class DWIN_LCD:
 		self.lcd.Frame_AreaCopy(1, 1, 151, 101, 161, self.LBLX, line)  # "Steps-per-mm"
 
 	# Display an SD item
-	def Draw_SDItem(self, item, row=0):
+	def Draw_SDItem(self, item, row=0,custom=""):
 		fl = self.pd.GetFiles()[item]
+		if (len(custom) > 0):
+			fl = custom
 		self.Draw_Menu_Line(row, self.ICON_File, fl)
 
 	def Draw_Select_Highlight(self, sel):
@@ -1723,11 +1746,15 @@ class DWIN_LCD:
 
 	def Draw_Control_Menu(self):
 		self.Clear_Main_Window()
+		scroll = self.MROWS - self.index_prepare
 		self.Draw_Back_First(self.select_control.now == 0)
 		self.lcd.Frame_TitleCopy(1, 128, 2, 176, 12)  # "Control"
 		self.lcd.Frame_AreaCopy(1, 1, 89, 83, 101, self.LBLX, self.MBASE(self.CONTROL_CASE_TEMP))  # Temperature >
-		self.lcd.Frame_AreaCopy(1, 84, 89, 128, 99, self.LBLX, self.MBASE(self.CONTROL_CASE_MOVE))  # Motion >
-		self.lcd.Frame_AreaCopy(1, 0, 104, 25, 115, self.LBLX, self.MBASE(self.CONTROL_CASE_INFO))  # Info >
+		self.Draw_SDItem(0, 2, "Toggle Printer")
+		self.Draw_SDItem(0, 3, "Toggle Lights")
+		self.Draw_SDItem(0, 4, "Firmware Restart")
+		
+
 
 		if self.select_control.now and self.select_control.now < self.MROWS:
 			self.Draw_Menu_Cursor(self.select_control.now)
@@ -1737,8 +1764,11 @@ class DWIN_LCD:
 		self.Draw_More_Icon(1)
 		self.Draw_Menu_Line(2, self.ICON_Motion)
 		self.Draw_More_Icon(2)
-		self.Draw_Menu_Line(3, self.ICON_Info)
+		self.Draw_Menu_Line(3, self.ICON_Motion)
 		self.Draw_More_Icon(3)
+		self.Draw_Menu_Line(4, self.ICON_ResumeEEPROM)
+		self.Draw_More_Icon(4)
+		
 
 	def Draw_Info_Menu(self):
 		self.Clear_Main_Window()
