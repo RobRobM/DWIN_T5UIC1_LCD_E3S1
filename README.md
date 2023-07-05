@@ -189,7 +189,7 @@ Press ctrl+c to exit run.py
 	The run.sh script that is loaded by simpleLCD.service will re-run run.py on firmware restarts of the printe. If it fails to start for 5 times within 30 second it will exit and stop until the net boot. 
 
 ```bash
-sudo chmod +x run.sh simpleLCD.service
+chmod +x run.sh simpleLCD.service
 ```
    
 ```bash
@@ -201,11 +201,7 @@ sudo chmod 644 /lib/systemd/system/simpleLCD.service
 ```
 
 ```bash
-sudo systemctl daemon-reload && sudo systemctl enable simpleLCD.service
-```
-
-```bash
-sudo reboot
+sudo systemctl enable simpleLCD.service && sudo systemctl start simpleLCD.service
 ```
 
 Your LCD should start after 30 seconds. And when you restart your printer firmware the LCD should restart as well.
